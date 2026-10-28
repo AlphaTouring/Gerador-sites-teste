@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gerador de Sites — Teste</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#18202a;background:#f4f6f8}
+    *{box-sizing:border-box}body{margin:0;padding:20px}.wrap{max-width:760px;margin:auto}
+    .card{background:white;border:1px solid #dfe4ea;border-radius:16px;padding:20px;margin:14px 0}
+    h1{font-size:1.6rem;margin:0 0 8px}p{line-height:1.5;color:#4c5968}
+    label{display:block;font-weight:650;margin:14px 0 6px}
+    input,textarea,select{width:100%;padding:12px;border:1px solid #cbd3dc;border-radius:9px;font:inherit;background:white}
+    textarea{min-height:130px;resize:vertical}
+    button{background:#17212f;color:white;border:0;border-radius:10px;padding:13px 16px;font:inherit;font-weight:700;width:100%;margin-top:16px}
+    button:disabled{opacity:.55}.muted{font-size:.9rem;color:#667382}.status{white-space:pre-wrap;overflow-wrap:anywhere}
+    pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#101820;color:#e9f0f6;padding:14px;border-radius:10px;overflow:auto}
+    .file{border-top:1px solid #e2e7ec;padding-top:12px;margin-top:14px}.hidden{display:none}
+  </style>
+</head>
+<body>
+<main class="wrap">
+  <section class="card">
+    <h1>Gerador automático de sites</h1>
+    <p>Descreva o site. A IA vai preparar os arquivos para você revisar. Nada será publicado automaticamente.</p>
+    <label for="business">Nome do negócio</label>
+    <input id="business" placeholder="Ex.: Padaria Pão Quente" maxlength="100">
+    <label for="type">Tipo de site</label>
+    <select id="type">
+      <option>Site institucional</option><option>Padaria</option><option>Restaurante</option>
+      <option>Loja de roupas</option><option>Barbearia</option><option>Landing page</option>
+    </select>
+    <label for="brief">O que o site precisa ter?</label>
+    <textarea id="brief" placeholder="Descreva cores, produtos, serviços, seções e funcionalidades desejadas. Não inclua senhas ou dados de clientes."></textarea>
+    <button id="generate">Gerar arquivos do site</button>
+    <p id="status" class="status muted" role="status"></p>
+  </section>
+  <section id="results" class="card hidden">
+    <h2>Arquivos gerados</h2>
+    <p>Revise o conteúdo antes de usar. A geração não publica o site.</p>
+    <div id="files"></div>
+    <button id="download">Baixar arquivos do site (.zip)</button>
+    <p class="muted">O download usa JSZip carregado pela internet. Se não carregar, copie os arquivos exibidos.</p>
+  </section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+let generatedFiles = {};
+$('generate').addEventListener('click', async () => {
+  const business = $('business').value.trim();
+  const brief = $('brief').value.trim();
+  if (!business || !brief) { $('status').textContent = 'Preencha o nome do negócio e a descrição.'; return; }
+  $('generate').disabled = true;
+  $('status').textContent = 'Gerando os arquivos… aguarde.';
+  $('results').classList.add('hidden');
+  try {
+    const res = await fetch('/.netlify/functions/generate', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({business, type:$('type').value, brief})
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Não foi possível gerar os arquivos.');
+    generatedFiles = data.files || {};
+    $('files').innerHTML = '';
+    for (const [name, content] of Object.entries(generatedFiles)) {
+      const wrap = document.createElement('div'); wrap.className = 'file';
+      const title = document.createElement('strong'); title.textContent = name;
+      const pre = document.createElement('pre'); pre.textContent = content;
+      wrap.append(title, pre); $('files').appendChild(wrap);
+    }
+    $('results').classList.remove('hidden');
+    $('status').textContent = 'Arquivos gerados. Revise antes de usar ou publicar.';
+  } catch (e) {
+    $('status').textContent = 'Erro: ' + e.message + '\nConfira se a variável OPENAI_API_KEY está configurada e se a função foi publicada.';
+  } finally { $('generate').disabled = false; }
+});
+$('download').addEventListener('click', async () => {
+  if (!window.JSZip) { $('status').textContent = 'Não foi possível carregar o criador de ZIP. Você pode copiar os arquivos exibidos.'; return; }
+  const zip = new JSZip();
+  for (const [name, content] of Object.entries(generatedFiles)) zip.file(name, content);
+  const blob = await zip.generateAsync({type:'blob'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'site-gerado.zip'; a.click();
+  URL.revokeObjectURL(url);
+});
+</script>
+</body>
+</html>

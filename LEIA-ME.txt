@@ -1,0 +1,13 @@
+GERADOR DE SITES — TESTE
+
+Este projeto contém:
+- index.html: formulário para descrever o site
+- netlify/functions/generate.js: chama a API OpenAI no servidor
+- netlify.toml: configura o diretório de funções
+
+IMPORTANTE:
+1. A chave da OpenAI NÃO deve ser colocada em nenhum arquivo.
+2. Na Netlify, crie a variável de ambiente OPENAI_API_KEY com sua chave secreta.
+3. Esta aplicação precisa ser implantada por um método que publique também Netlify Functions. O Netlify Drop/manual upload de arquivos estáticos pode publicar apenas a página e não disponibilizar a função.
+4. Não publique nem use para pagamentos reais sem revisão e testes.
+5. A API pode gerar custos. O código limita o briefing a 5.000 caracteres, mas não implementa autenticação; mantenha o site de teste privado ou proteja o acesso enquanto testa.
